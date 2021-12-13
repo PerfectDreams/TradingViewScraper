@@ -18,8 +18,8 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
 class TradingViewAPI(
-        val authToken: String = "unauthorized_user_token",
-        val pingInterval: Int = 20_000
+    val authToken: String = "unauthorized_user_token",
+    val pingInterval: Int = 20_000
 ) {
     companion object {
         private val client = HttpClient(CIO) {
@@ -38,46 +38,46 @@ class TradingViewAPI(
     private val subscribedTickers = mutableMapOf<String, JsonObject>()
     private val tickerCallbacks = mutableMapOf<String, (JsonObject, Throwable?) -> (Unit)>()
     private val defaultTickerFields = listOf(
-            "ch",
-            "chp",
-            "current_session",
-            "description",
-            // "local_description",
-            "language",
-            "exchange",
-            "fractional",
-            "is_tradable",
-            "lp",
-            "minmov",
-            "minmove2",
-            "original_name",
-            "pricescale",
-            "pro_name",
-            "short_name",
-            "type",
-            "update_mode",
-            "volume",
-            "ask",
-            "bid",
-            // "fundamentals",
-            "high_price",
-            "is_tradable",
-            "low_price",
-            "open_price",
-            "prev_close_price",
-            "rch",
-            "rchp",
-            "rtc",
-            // "status",
-            "basic_eps_net_income",
-            "beta_1_year",
-            "earnings_per_share_basic_ttm",
-            "industry",
-            "market_cap_basic",
-            // "price_earnings_ttm",
-            "sector",
-            "volume",
-            "dividends_yield"
+        "ch",
+        "chp",
+        "current_session",
+        "description",
+        // "local_description",
+        "language",
+        "exchange",
+        "fractional",
+        "is_tradable",
+        "lp",
+        "minmov",
+        "minmove2",
+        "original_name",
+        "pricescale",
+        "pro_name",
+        "short_name",
+        "type",
+        "update_mode",
+        "volume",
+        "ask",
+        "bid",
+        // "fundamentals",
+        "high_price",
+        "is_tradable",
+        "low_price",
+        "open_price",
+        "prev_close_price",
+        "rch",
+        "rchp",
+        "rtc",
+        // "status",
+        "basic_eps_net_income",
+        "beta_1_year",
+        "earnings_per_share_basic_ttm",
+        "industry",
+        "market_cap_basic",
+        // "price_earnings_ttm",
+        "sector",
+        "volume",
+        "dividends_yield"
     )
     var ready = false
     var isShuttingDown = false
@@ -90,12 +90,12 @@ class TradingViewAPI(
         GlobalScope.launch(Dispatchers.IO) {
             try {
                 client.wssRaw(
-                        host = "data.tradingview.com",
-                        path = "/socket.io/websocket",
-                        request = {
-                            this.header("Origin", "https://br.tradingview.com")
-                            this.header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:79.0) Gecko/20100101 Firefox/79.0")
-                        }
+                    host = "data.tradingview.com",
+                    path = "/socket.io/websocket",
+                    request = {
+                        this.header("Origin", "https://br.tradingview.com")
+                        this.header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:79.0) Gecko/20100101 Firefox/79.0")
+                    }
                 ) {
                     _session = this
 
@@ -191,14 +191,14 @@ class TradingViewAPI(
 
     suspend fun registerTicker(tickerId: String) {
         sendMessage(
-                createAuthenticatedMessage("quote_add_symbols") {
-                    + tickerId
-                    + json {
-                        "flags" to jsonArray {
-                            + "force_permission"
-                        }
+            createAuthenticatedMessage("quote_add_symbols") {
+                add(tickerId)
+                addJsonObject {
+                    putJsonArray("flags") {
+                        add("force_permission")
                     }
                 }
+            }
         )
     }
 
@@ -239,85 +239,89 @@ class TradingViewAPI(
             lastPingReceivedAt = System.currentTimeMillis()
             sendMessage(payload) // Just reply with the original content
         } else if (payload.startsWith("{") && payload.endsWith("}")) {
-            val json = Json.parseJson(payload)
+            val json = Json.parseToJsonElement(payload)
             logger.debug { "As json: ${json}" }
 
-            if (json.contains("session_id")) {
-                sendAuthToken(authToken)
-                createQuoteSession()
-                setQuoteFields(*defaultTickerFields.toTypedArray())
-                logger.debug { "Session is ready!" }
-                connectionTries = 1
-                ready = true
-                lastPingReceivedAt = System.currentTimeMillis()
+            if (json is JsonObject) {
+                if (json.containsKey("session_id")) {
+                    sendAuthToken(authToken)
+                    createQuoteSession()
+                    setQuoteFields(*defaultTickerFields.toTypedArray())
+                    logger.debug { "Session is ready!" }
+                    connectionTries = 1
+                    ready = true
+                    lastPingReceivedAt = System.currentTimeMillis()
 
-                logger.debug { "Creating ticker subscriptions for previously created ${subscribedTickers.size} tickers" }
+                    logger.debug { "Creating ticker subscriptions for previously created ${subscribedTickers.size} tickers" }
 
-                for ((tickerId, _) in subscribedTickers) {
-                    registerTicker(tickerId)
-                }
-
-                GlobalScope.launch(Dispatchers.IO) {
-                    while (!isShuttingDown) {
-                        val diff = System.currentTimeMillis() - lastPingReceivedAt
-
-                        if (diff > pingInterval) {
-                            logger.warn { "Last ping was received more than ${pingInterval}ms ago! Shutting down connection and reconnecting..." }
-                            shutdownSession()
-                            return@launch
-                        }
-
-                        logger.info { "Last ping was received ${diff}ms ago" }
-
-                        delay(5_000)
-                    }
-                }
-            } else if (json.contains("m")) {
-                val method = json.jsonObject["m"]!!.content
-
-                logger.debug { "Method: $method" }
-
-                if (method == "qsd") {
-                    val data = json.jsonObject["p"]!!.jsonArray[1].jsonObject
-                    val s = data["s"]!!.content
-                    val n = data["n"]!!.content
-                    val v = data["v"]!!.jsonObject
-
-                    if (s == "error") {
-                        tickerCallbacks[n]?.invoke(json {}, InvalidTickerException())
-                        return
+                    for ((tickerId, _) in subscribedTickers) {
+                        registerTicker(tickerId)
                     }
 
-                    val currentTicket = subscribedTickers[n]
+                    GlobalScope.launch(Dispatchers.IO) {
+                        while (!isShuttingDown) {
+                            val diff = System.currentTimeMillis() - lastPingReceivedAt
 
-                    val newTicket = json {
-                        currentTicket?.forEach { k, value ->
-                            if (!v.containsKey(k))
-                                k to value
-                        }
+                            if (diff > pingInterval) {
+                                logger.warn { "Last ping was received more than ${pingInterval}ms ago! Shutting down connection and reconnecting..." }
+                                shutdownSession()
+                                return@launch
+                            }
 
-                        v.forEach { k, v ->
-                            k to v
+                            logger.info { "Last ping was received ${diff}ms ago" }
+
+                            delay(5_000)
                         }
                     }
+                } else if (json.containsKey("m")) {
+                    val method = json.jsonObject["m"]!!.jsonPrimitive.content
 
-                    logger.debug { n }
-                    logger.debug { tickerCallbacks[n] }
+                    logger.debug { "Method: $method" }
 
-                    subscribedTickers[n] = newTicket
-                    logger.debug { "New Ticket: $newTicket" }
+                    if (method == "qsd") {
+                        val data = json.jsonObject["p"]!!.jsonArray[1].jsonObject
+                        val s = data["s"]!!.jsonPrimitive.content
+                        val n = data["n"]!!.jsonPrimitive.content
+                        val v = data["v"]!!.jsonObject
 
-                    tickerCallbacks[n]?.invoke(newTicket, null)
+                        if (s == "error") {
+                            tickerCallbacks[n]?.invoke(buildJsonObject {}, InvalidTickerException())
+                            return
+                        }
+
+                        val currentTicket = subscribedTickers[n]
+
+                        val newTicket = buildJsonObject {
+                            currentTicket?.forEach { k, value ->
+                                if (!v.containsKey(k))
+                                    k to value
+                            }
+
+                            v.forEach { k, v ->
+                                k to v
+                            }
+                        }
+
+                        logger.debug { n }
+                        logger.debug { tickerCallbacks[n] }
+
+                        subscribedTickers[n] = newTicket
+                        logger.debug { "New Ticket: $newTicket" }
+
+                        tickerCallbacks[n]?.invoke(newTicket, null)
+                    }
                 }
+            } else {
+                logger.warn { "Received JsonElement is not a JsonObject!" }
             }
         }
     }
 
     private suspend fun sendAuthToken(tokenType: String) {
-        val json = json {
-            "m" to "set_auth_token"
-            "p" to jsonArray {
-                + tokenType
+        val json = buildJsonObject {
+            put("m", "set_auth_token")
+            putJsonArray("p") {
+                add(tokenType)
             }
         }
 
@@ -333,16 +337,16 @@ class TradingViewAPI(
     private suspend fun setQuoteFields(vararg fields: String) {
         val json = createAuthenticatedMessage("quote_set_fields") {
             for (field in fields)
-                + field
+                add(field)
         }
 
         sendMessage(json)
     }
 
-    private fun createAuthenticatedMessage(method: String, data: JsonArrayBuilder.() -> (Unit)) = json {
-        "m" to method
-        "p" to jsonArray {
-            + sessionId
+    private fun createAuthenticatedMessage(method: String, data: JsonArrayBuilder.() -> (Unit)) = buildJsonObject {
+        put("m", method)
+        putJsonArray("p") {
+            add(sessionId)
             data.invoke(this)
         }
     }
