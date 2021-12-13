@@ -11,6 +11,8 @@ import io.ktor.http.cio.websocket.Frame
 import io.ktor.http.cio.websocket.close
 import io.ktor.http.cio.websocket.readText
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.serialization.json.*
 import mu.KotlinLogging
 import kotlin.coroutines.Continuation
@@ -79,7 +81,7 @@ class TradingViewAPI(
         "volume",
         "dividends_yield"
     )
-    var ready = false
+    var ready = MutableStateFlow(false)
     var isShuttingDown = false
     var connectionTries = 1
 
@@ -134,8 +136,9 @@ class TradingViewAPI(
             connect()
         }
 
-        while (!ready)
-            Thread.sleep(25)
+        runBlocking {
+            awaitReady()
+        }
     }
 
     suspend fun shutdownSession() {
@@ -151,8 +154,7 @@ class TradingViewAPI(
 
     suspend fun getTicker(tickerId: String): JsonObject? = subscribedTickers[tickerId]
     suspend fun getOrRetrieveTicker(tickerId: String, requiredFields: List<String> = defaultTickerFields): JsonObject {
-        while (!ready)
-            delay(25)
+        awaitReady()
 
         val ticker = getTicker(tickerId)
         if (ticker != null)
@@ -249,7 +251,7 @@ class TradingViewAPI(
                     setQuoteFields(*defaultTickerFields.toTypedArray())
                     logger.debug { "Session is ready!" }
                     connectionTries = 1
-                    ready = true
+                    ready.value = true
                     lastPingReceivedAt = System.currentTimeMillis()
 
                     logger.debug { "Creating ticker subscriptions for previously created ${subscribedTickers.size} tickers" }
@@ -356,5 +358,15 @@ class TradingViewAPI(
     private suspend fun sendRawMessage(rawContent: String) {
         logger.debug { "^ $rawContent" }
         session.send(Frame.Text(rawContent))
+    }
+
+    // Suspends while ready != true
+    // https://stackoverflow.com/a/66332000/7271796
+    private suspend fun awaitReady() {
+        if (ready.value) {
+            return
+        } else {
+            ready.first { it }
+        }
     }
 }
