@@ -143,6 +143,7 @@ class TradingViewAPI(
 
     suspend fun shutdownSession() {
         isShuttingDown = true
+        ready.value = false
         session.close()
     }
 
@@ -192,6 +193,8 @@ class TradingViewAPI(
     }
 
     suspend fun registerTicker(tickerId: String) {
+        awaitReady()
+
         sendMessage(
             createAuthenticatedMessage("quote_add_symbols") {
                 add(tickerId)
