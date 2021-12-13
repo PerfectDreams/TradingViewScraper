@@ -4,7 +4,6 @@ import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
 import io.ktor.client.features.websocket.ClientWebSocketSession
 import io.ktor.client.features.websocket.WebSockets
-import io.ktor.client.features.websocket.wss
 import io.ktor.client.features.websocket.wssRaw
 import io.ktor.client.request.header
 import io.ktor.http.cio.websocket.Frame
@@ -15,7 +14,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.serialization.json.*
 import mu.KotlinLogging
-import kotlin.coroutines.Continuation
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
@@ -294,16 +292,17 @@ class TradingViewAPI(
                             return
                         }
 
-                        val currentTicket = subscribedTickers[n]
+                        val currentTicker = subscribedTickers[n]
 
+                        // Clones the ticker object
                         val newTicket = buildJsonObject {
-                            currentTicket?.forEach { k, value ->
+                            currentTicker?.forEach { k, value ->
                                 if (!v.containsKey(k))
-                                    k to value
+                                    put(k, value)
                             }
 
                             v.forEach { k, v ->
-                                k to v
+                                put(k, v)
                             }
                         }
 
@@ -311,7 +310,7 @@ class TradingViewAPI(
                         logger.debug { tickerCallbacks[n] }
 
                         subscribedTickers[n] = newTicket
-                        logger.debug { "New Ticket: $newTicket" }
+                        logger.debug { "New Ticker: $newTicket" }
 
                         tickerCallbacks[n]?.invoke(newTicket, null)
                     }
