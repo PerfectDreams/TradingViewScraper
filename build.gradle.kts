@@ -1,12 +1,12 @@
 plugins {
-    kotlin("jvm") version "1.5.31"
-    kotlin("plugin.serialization") version "1.5.31"
+    kotlin("jvm") version "1.6.20"
+    kotlin("plugin.serialization") version "1.6.20"
     `maven-publish`
 }
 
 // name = "TradingViewScraper"
 group = "net.perfectdreams.tradingviewscraper"
-version = "0.0.8"
+version = "0.0.9-SNAPSHOT"
 
 repositories {
     mavenCentral()
