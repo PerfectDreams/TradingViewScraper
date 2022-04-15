@@ -6,7 +6,7 @@ plugins {
 
 // name = "TradingViewScraper"
 group = "net.perfectdreams.tradingviewscraper"
-version = "0.0.7-SNAPSHOT"
+version = "0.0.7"
 
 repositories {
     mavenCentral()
