@@ -2,8 +2,7 @@ package net.perfectdreams.tradingviewscraper
 
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
-import io.ktor.client.plugins.websocket.ClientWebSocketSession
-import io.ktor.client.plugins.websocket.WebSockets
+import io.ktor.client.plugins.websocket.*
 import io.ktor.client.plugins.websocket.cio.*
 import io.ktor.client.request.header
 import io.ktor.websocket.*
@@ -87,12 +86,11 @@ class TradingViewAPI(
 
         GlobalScope.launch(Dispatchers.IO) {
             try {
-                client.wssRaw(
-                    host = "data.tradingview.com",
-                    path = "/socket.io/websocket",
-                    request = {
+                client.webSocket(
+                    "wss://data.tradingview.com/socket.io/websocket",
+                    {
                         this.header("Origin", "https://br.tradingview.com")
-                        this.header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:79.0) Gecko/20100101 Firefox/79.0")
+                        this.header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:101.0) Gecko/20100101 Firefox/101.0")
                     }
                 ) {
                     _session = this
@@ -109,7 +107,7 @@ class TradingViewAPI(
                                     logger.info { "Received shutdown frame! $frame" }
                                     logger.info { "Shutting down the session and reconnecting..." }
                                     shutdownSession()
-                                    return@wssRaw
+                                    return@webSocket
                                 }
                                 else -> {
                                     logger.info { "Received strange frame! $frame" }
