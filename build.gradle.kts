@@ -6,7 +6,7 @@ plugins {
 
 // name = "TradingViewScraper"
 group = "net.perfectdreams.tradingviewscraper"
-version = "0.0.10"
+version = "0.0.11"
 
 repositories {
     mavenCentral()
@@ -15,11 +15,11 @@ repositories {
 
 dependencies {
     implementation(kotlin("stdlib-jdk8"))
-    implementation("io.ktor:ktor-client-core:2.0.0")
-    implementation("io.ktor:ktor-client-websockets:2.0.0")
-    implementation("io.ktor:ktor-client-cio:2.0.0")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.3.1")
-    implementation("io.github.microutils:kotlin-logging:2.1.16")
+    implementation("io.ktor:ktor-client-core:2.0.1")
+    implementation("io.ktor:ktor-client-websockets:2.0.1")
+    implementation("io.ktor:ktor-client-cio:2.0.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.3.3")
+    implementation("io.github.microutils:kotlin-logging:2.1.21")
 }
 
 tasks {

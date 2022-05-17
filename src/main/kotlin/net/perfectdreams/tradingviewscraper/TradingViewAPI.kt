@@ -138,7 +138,12 @@ class TradingViewAPI(
     suspend fun shutdownSession() {
         isShuttingDown = true
         ready.value = false
-        session.close()
+        if (session.isActive)
+            try {
+                session.close()
+            } catch (e: Exception) {
+                logger.warn(e) { "Failed to close session! Is it already closed?" }
+            }
     }
 
     suspend fun shutdown() {
