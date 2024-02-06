@@ -197,11 +197,12 @@ class TradingViewAPI(
         sendMessage(
             createAuthenticatedMessage("quote_add_symbols") {
                 add(tickerId)
-                addJsonObject {
+                // 06/02/2024 update - Doesn't seem to be used anymore, using these flags causes the client to bork out with "{"m":"critical_error","p":["qs_rfcyvedtgukx","invalid_parameters","quote_add_symbols"]}"
+                /* addJsonObject {
                     putJsonArray("flags") {
                         add("force_permission")
                     }
-                }
+                } */
             }
         )
     }
